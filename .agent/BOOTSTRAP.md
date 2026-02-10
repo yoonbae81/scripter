@@ -40,10 +40,14 @@ project-name/
 ├── scripts/                      # Execution and deployment scripts
 │   ├── setup-env.sh              # Environment setup script
 │   ├── install-systemd.sh        # Systemd installation script
+│   ├── deploy.sh                 # Deployment script (git pull, restart)
 │   ├── run.sh                    # Main execution script
 │   └── systemd/                  # Systemd configuration files
 │       ├── project-name.service  # Service definition
 │       └── project-name.timer    # Timer definition
+├── .github/                      # GitHub configurations
+│   └── workflows/
+│       └── deploy.yml            # Auto-deployment via SSH
 ├── .venv/                        # Python virtual environment (created by setup-env.sh)
 ├── .env                          # Environment variables (private, created from .env.example)
 ├── .env.example                  # Environment variable template
@@ -61,6 +65,8 @@ project-name/
 | `.env.example` | Environment variable template (excluding actual values) |
 | `setup-env.sh` | venv creation, dependency installation, .env creation |
 | `install-systemd.sh` | Systemd service/timer installation |
+| `deploy.sh` | Deployment script (git pull, pip install, restart) |
+| `.github/workflows/deploy.yml` | GitHub Action for automated SSH deployment |
 | `tests/` | unittest-based test code |
 | `README.md` | Installation, usage, structure description |
 
@@ -302,6 +308,35 @@ source "$PROJECT_DIR/.venv/bin/activate"
 python "$PROJECT_DIR/src/main.py" "$@"
 ```
 
+#### 3.3.4. `scripts/deploy.sh`
+Deployment script for remote server:
+
+```bash
+#!/bin/bash
+set -e
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SERVICE_NAME=$(basename "$PROJECT_DIR")
+
+echo "Starting deployment for $SERVICE_NAME..."
+
+# 1. Pull latest code
+echo "Pulling latest changes from git..."
+git pull origin main
+
+# 2. Update dependencies
+if [ -f "$PROJECT_DIR/requirements.txt" ]; then
+    echo "Updating dependencies..."
+    "$PROJECT_DIR/.venv/bin/pip" install -r "$PROJECT_DIR/requirements.txt"
+fi
+
+# 3. Restart services
+echo "Restarting service..."
+systemctl --user restart "$SERVICE_NAME.service"
+
+echo "Deployment completed successfully!"
+```
+
 ### 3.4. Systemd Configuration Files
 
 #### 3.4.1. `scripts/systemd/project-name.service`
@@ -454,6 +489,36 @@ if __name__ == "__main__":
     main()
 ```
 
+### 3.8. GitHub Action Deployment
+
+#### 3.8.1. `.github/workflows/deploy.yml`
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Execute remote deployment script
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            ./scripts/deploy.sh
+```
+
 ### 3.7. README.md
 
 ```markdown
@@ -533,13 +598,16 @@ Check the following items when initializing a project:
 - [ ] Create project root directory
 - [ ] Create `src/` directory
 - [ ] Create `tests/` directory
-- [ ] Create `scripts/` and `scripts/systemd/` directories
+- [ ] Create `scripts/`, `scripts/systemd/` directories
+- [ ] Create `.github/workflows/` directory
 - [ ] Create `requirements.txt` and write dependencies
 - [ ] Create `.env.example` and write environment variable template
 - [ ] Create `.gitignore`
 - [ ] Create `scripts/setup-env.sh` and grant execution permission (`chmod +x`)
 - [ ] Create `scripts/install-systemd.sh` and grant execution permission (`chmod +x`)
+- [ ] Create `scripts/deploy.sh` and grant execution permission (`chmod +x`)
 - [ ] Create `scripts/run.sh` and grant execution permission (`chmod +x`)
+- [ ] Create `.github/workflows/deploy.yml`
 - [ ] Create `scripts/systemd/project-name.service`
 - [ ] Create `scripts/systemd/project-name.timer`
 - [ ] Create `tests/__init__.py`
@@ -594,6 +662,21 @@ nano scripts/systemd/project-name.timer
 
 # 3. Reinstall timer
 ./scripts/install-systemd.sh
+```
+
+### 5.4. Deployment Process
+
+```bash
+# 1. Commit and push changes
+git add .
+git commit -m "Your commit message"
+git push origin main
+
+# 2. Automated deployment (GitHub Action)
+# Workflow will automatically run and execute scripts/deploy.sh on the remote server
+
+# 3. Manual deployment (if needed)
+ssh user@remote-host "cd /path/to/project && ./scripts/deploy.sh"
 ```
 
 ---
