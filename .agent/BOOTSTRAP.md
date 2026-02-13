@@ -90,8 +90,7 @@ List required Python packages for the project:
 
 ```
 # Project dependencies
-python-dotenv >= 1.0.0
-requests >= 2.31.0
+script-reporter
 ```
 
 #### 3.2.2. `.env.example`
@@ -290,22 +289,11 @@ echo "  • Follow logs:          journalctl --user -u $SERVICE_NAME.service -f"
 Main execution script:
 
 ```bash
-#!/bin/bash
-set -e
+# Step 0: Initial Login (Optional, for session-based scripts)
+# "$VENV_PYTHON" "$PROJECT_DIR/src/login.py"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# Load environment variables
-if [ -f "$PROJECT_DIR/.env" ]; then
-    export $(cat "$PROJECT_DIR/.env" | grep -v '^#' | xargs)
-fi
-
-# Activate virtual environment
-source "$PROJECT_DIR/.venv/bin/activate"
-
-# Run main script
-python "$PROJECT_DIR/src/main.py" "$@"
+# Step 1: Run core logic
+"$VENV_PYTHON" "$PROJECT_DIR/src/main.py" "$@"
 ```
 
 #### 3.3.4. `scripts/deploy.sh`
@@ -316,6 +304,7 @@ Deployment script for remote server:
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 SERVICE_NAME=$(basename "$PROJECT_DIR")
 
 echo "Starting deployment for $SERVICE_NAME..."
@@ -472,21 +461,70 @@ Description of what this script does.
 """
 
 import os
+import sys
+import traceback
 from dotenv import load_dotenv
+from script_reporter import ScriptReporter
 
 # Load environment variables
 load_dotenv()
 
+def run(sr: ScriptReporter):
+    """Business logic for the script"""
+    sr.stage("PREPARING")
+    # ... setup logic ...
+    
+    sr.stage("EXECUTING")
+    # ... main logic ...
+    
+    return {"status": "completed", "count": 10}
+
 def main():
-    """Main function"""
-    print("Project Name - Running...")
-
-    # Your code here
-
-    print("Project Name - Completed!")
+    """Main entry point with reporting"""
+    sr = ScriptReporter("Project Name")
+    
+    try:
+        result = run(sr)
+        sr.success(result)
+    except Exception:
+        sr.fail(traceback.format_exc())
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
+```
+
+### 3.7. Standard Reporting Strategy
+
+Scripter projects use `script-reporter` to provide consistent execution feedback.
+
+#### 3.7.1. Initialization
+Create a `ScriptReporter` instance with the task name (conventionally named `sr`).
+
+```python
+from script_reporter import ScriptReporter
+sr = ScriptReporter("Task Name")
+```
+
+#### 3.7.2. Tracking Progress
+Use `.stage("STAGE_NAME")` to mark progress during execution.
+
+```python
+sr.stage("FETCHING_DATA")
+# ... fetch data ...
+sr.stage("PROCESSING")
+# ... process data ...
+```
+
+#### 3.7.3. Finalizing Result
+Always call `.success(data)` on completion or `.fail(error_message)` on failure.
+
+```python
+# Success
+sr.success({"items_processed": 100})
+
+# Failure
+sr.fail("Connection timed out")
 ```
 
 ### 3.8. GitHub Action Deployment
@@ -515,11 +553,13 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            cd ${{ secrets.PROJECT_PATH }}
-            ./scripts/deploy.sh
+            # Automatically find project directory based on repository name
+            cd ~/${{ github.event.repository.name }}
+
+            bash scripts/deploy.sh
 ```
 
-### 3.7. README.md
+### 3.9. README.md
 
 ```markdown
 # Project Name
@@ -536,7 +576,7 @@ Brief description of project.
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.12 or higher
 - pip
 
 ### Setup
@@ -566,13 +606,13 @@ nano .env
 ```bash
 # Install systemd timer
 ./scripts/install-systemd.sh
-
-# Check timer status
-systemctl --user status project-name.timer
-
-# View logs
-journalctl --user -u project-name.service -f
 ```
+
+**Useful commands**:
+  • Check timer status:   `systemctl --user status project-name.timer`
+  • Check service logs:   `journalctl --user -u project-name.service`
+  • Follow logs:          `journalctl --user -u project-name.service -f`
+
 
 ## Project Structure
 
@@ -615,6 +655,7 @@ Check the following items when initializing a project:
 - [ ] Create `tests/README.md`
 - [ ] Create `src/main.py`
 - [ ] Create `README.md`
+- [ ] Verify `script-reporter` in `requirements.txt`
 - [ ] Test `setup-env.sh` execution
 - [ ] Test `run.sh` execution
 - [ ] Test test execution (`python -m unittest discover tests`)
@@ -676,7 +717,7 @@ git push origin main
 # Workflow will automatically run and execute scripts/deploy.sh on the remote server
 
 # 3. Manual deployment (if needed)
-ssh user@remote-host "cd /path/to/project && ./scripts/deploy.sh"
+ssh user@remote-host "cd ~/project-name && ./scripts/deploy.sh"
 ```
 
 ---

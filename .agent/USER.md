@@ -57,7 +57,7 @@ Avoid unnecessary conversation, deliver technical content directly.
 **/bin/zsh**
 
 ### 3.3. Working Directory
-**/Users/y/Scripter**
+**~/Scripter**
 
 ---
 

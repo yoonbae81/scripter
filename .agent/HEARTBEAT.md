@@ -49,7 +49,7 @@ The agent checks the following items when executing HEARTBEAT:
 ### 3.1. Milestone Report
 
 ```markdown
-🛡️ Milestone Report: [Milestone Name]
+Milestone Report: [Milestone Name]
 
 ## Progress Summary
 - Milestone Status: [Completed/In Progress]
@@ -70,7 +70,7 @@ The agent checks the following items when executing HEARTBEAT:
 ### 3.2. Session/Cycle End Report (Context Handoff)
 
 ```markdown
-🛡️ Session State: [Date/Time]
+Session State: [Date/Time]
 
 ## Completed Tasks
 - [List of completed Task IDs]
@@ -91,7 +91,7 @@ The agent checks the following items when executing HEARTBEAT:
 ### 3.3. Usage Report
 
 ```markdown
-🛡️ Quota Alert: [Date/Time]
+Quota Alert: [Date/Time]
 
 ## Current Usage
 - Quota Usage: XX%
@@ -208,7 +208,7 @@ To ensure security and prevent credential leakage (e.g., in GitHub), the Webhook
 ```bash
 curl -H "Content-Type: application/json" \
      -X POST \
-     -d "{\"content\": \"🛡️ **Milestone Achievement**\n[Report Content...]\"}" \
+     -d "{\"content\": \"**Milestone Achievement**\n[Report Content...]\"}" \
      $AGENT_HEARTBEAT_WEBHOOK
 ```
 
