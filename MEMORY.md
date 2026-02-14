@@ -8,7 +8,7 @@ This document is the permanent memory storage of the agent. Use this file to pre
 
 ---
 
-## 🛡️ HOW TO USE THIS FILE (Instruction for the Agent)
+## HOW TO USE THIS FILE (Instruction for the Agent)
 1. **Context Load**: Start every session by reading Section 3.3 (Pause Location) to understand where the last agent stopped.
 2. **Roadmap Sync**: Check Section 3.1 to see the big picture.
 3. **Queue Execution**: Pick the next `Pending` task from Section 3.2.
